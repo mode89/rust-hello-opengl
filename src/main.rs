@@ -1,3 +1,4 @@
+extern crate cgmath;
 #[macro_use]
 extern crate glium;
 extern crate winit;
@@ -28,9 +29,14 @@ use glium::{
     VertexBuffer,
 };
 
+use cgmath::{
+    Matrix4,
+    SquareMatrix,
+};
+
 #[derive(Copy, Clone)]
 struct Vertex {
-    position: [f32; 2],
+    position: [f32; 3],
 }
 implement_vertex!(Vertex, position);
 
@@ -41,20 +47,19 @@ fn main() {
     let event_loop = EventLoopBuilder::new().build();
     let (_window, display) = SimpleWindowBuilder::new().build(&event_loop);
 
-    let triangle = vec![
-        Vertex { position: [-0.5, -0.5] },
-        Vertex { position: [ 0.0,  0.5] },
-        Vertex { position: [ 0.5, -0.5] },
-    ];
-    let triangle_vb = VertexBuffer::new(&display, &triangle).unwrap();
-    let triangle_ib = NoIndices(PrimitiveType::TrianglesList);
-
     let program = Program::from_source(&display,
         &format!(r#"
             #version 140
-            in vec2 position;
+            in vec3 position;
+            uniform mat4 u_model;
+            uniform mat4 u_view;
+            uniform mat4 u_projection;
             void main() {{
-                gl_Position = vec4(position, 0.0, 1.0);
+                gl_Position =
+                    u_projection *
+                    u_view *
+                    u_model *
+                    vec4(position, 1.0);
             }}
         "#),
         r#"
@@ -67,6 +72,16 @@ fn main() {
         "#,
         None
     ).unwrap();
+
+    let line = vec![
+        Vertex { position: [-0.5, -0.5, 0.0] },
+        Vertex { position: [ 0.5, -0.5, 0.0] },
+        Vertex { position: [ 0.0,  0.5, 0.0] },
+    ];
+    let line_vb = VertexBuffer::new(&display, &line).unwrap();
+    let line_ib = NoIndices(PrimitiveType::LineStrip);
+
+    let identity = Matrix4::<f32>::identity();
 
     event_loop.run(move |ev, _, control_flow| {
         match ev {
@@ -89,13 +104,16 @@ fn main() {
             Event::NewEvents(StartCause::ResumeTimeReached { .. }) => {
                 control_flow.set_wait_until(Instant::now() + FRAME_TIME);
                 let mut target = display.draw();
-                target.clear_color(0.3, 0.3, 0.3, 1.0);
+                target.clear_color(0.1, 0.1, 0.1, 1.0);
                 target.draw(
-                    &triangle_vb,
-                    &triangle_ib,
+                    &line_vb,
+                    &line_ib,
                     &program,
                     &uniform! {
                         u_color: [1.0, 0.0, 0.0, 1.0f32],
+                        u_model: mat4(identity),
+                        u_view: mat4(identity),
+                        u_projection: mat4(identity),
                     },
                     &Default::default()
                 ).unwrap();
@@ -104,4 +122,8 @@ fn main() {
             _ => (),
         }
     });
+}
+
+fn mat4 (m: Matrix4<f32>) -> [[f32; 4]; 4] {
+    Into::<[[f32; 4]; 4]>::into(m)
 }
