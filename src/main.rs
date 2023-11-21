@@ -9,6 +9,7 @@ use std::time::{
 
 use winit::{
     event::{
+        DeviceEvent,
         Event,
         StartCause,
         WindowEvent,
@@ -73,6 +74,12 @@ fn main() {
                 WindowEvent::CloseRequested => control_flow.set_exit(),
                 WindowEvent::Resized(size) => {
                     display.resize(size.into());
+                },
+                _ => (),
+            },
+            Event::DeviceEvent { event, .. } => match event {
+                DeviceEvent::MouseMotion { delta } => {
+                    println!("Mouse moved by {} {}", delta.0, delta.1);
                 },
                 _ => (),
             },
