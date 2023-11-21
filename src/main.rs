@@ -2,14 +2,22 @@
 extern crate glium;
 extern crate winit;
 
-use winit::event::{
-    Event,
-    WindowEvent,
+use std::time::{
+    Duration,
+    Instant,
 };
-use winit::event_loop::{
-    EventLoopBuilder,
+
+use winit::{
+    event::{
+        Event,
+        StartCause,
+        WindowEvent,
+    },
+    event_loop::EventLoopBuilder,
 };
+
 use glium::{
+    backend::glutin::SimpleWindowBuilder,
     index::{
         NoIndices,
         PrimitiveType,
@@ -18,13 +26,15 @@ use glium::{
     Surface,
     VertexBuffer,
 };
-use glium::backend::glutin::SimpleWindowBuilder;
 
 #[derive(Copy, Clone)]
 struct Vertex {
     position: [f32; 2],
 }
 implement_vertex!(Vertex, position);
+
+const FPS: u32 = 60;
+const FRAME_TIME: Duration = Duration::from_micros(1_000_000 / FPS as u64);
 
 fn main() {
     let event_loop = EventLoopBuilder::new().build();
@@ -66,7 +76,11 @@ fn main() {
                 },
                 _ => (),
             },
-            Event::RedrawRequested(_) => {
+            Event::NewEvents(StartCause::Init) => {
+                control_flow.set_wait_until(Instant::now() + FRAME_TIME);
+            },
+            Event::NewEvents(StartCause::ResumeTimeReached { .. }) => {
+                control_flow.set_wait_until(Instant::now() + FRAME_TIME);
                 let mut target = display.draw();
                 target.clear_color(0.3, 0.3, 0.3, 1.0);
                 target.draw(
